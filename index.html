@@ -186,8 +186,13 @@ function server(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   return fetch(EXEC, { method: "POST", body: JSON.stringify({ fn: fn, args: [KEY].concat(args) }) })
     .catch(function (e) { throw "NetworkError: " + (e && e.message ? e.message : e); })
-    .then(function (r) { if (!r.ok) throw "NetworkError: HTTP " + r.status; return r.json(); })
-    .then(function (r) { if (r.error) throw r.error; return r.value; });
+    .then(function (r) { if (!r.ok) throw "NetworkError: HTTP " + r.status; return r.text(); })
+    .then(function (t) {
+      // 구글이 가끔 JSON 대신 "페이지를 찾을 수 없음" HTML 을 준다 (2026-10-04 실측). 연결 오류처럼 다시 보낸다
+      var r; try { r = JSON.parse(t); } catch (e) { throw "NetworkError: 서버 응답이 JSON 이 아니에요"; }
+      if (r.error) throw r.error;
+      return r.value;
+    });
 }
 
 function placeLine(p) {
