@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex">
+<title>혬드래곤♡ 블로그 글감</title>
+<style>
+  :root { --fg: #222; --muted: #777; --line: #e3e3e3; --accent: #03c75a; --bad: #d33; --bg: #fff; --chip: #f4f4f4; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: var(--fg); background: var(--bg); font-size: 16px; }
+  main { max-width: 560px; margin: 0 auto; padding: 16px 16px 96px; }
+  h1 { font-size: 20px; margin: 8px 0 16px; }
+  section { border-top: 1px solid var(--line); padding: 16px 0; }
+  label.t { display: block; font-weight: 600; margin-bottom: 8px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { border: 1px solid var(--line); background: var(--chip); border-radius: 18px; padding: 8px 14px; font-size: 15px; }
+  .chips button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  input[type=text], input[type=date], textarea, select { width: 100%; font-size: 16px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  textarea { min-height: 140px; resize: vertical; }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+  .row button, .btn { font-size: 15px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--chip); }
+  .results { margin-top: 8px; }
+  .results button { display: block; width: 100%; text-align: left; margin: 4px 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 14px; }
+  .picked { margin-top: 8px; padding: 10px; border-radius: 8px; background: #eefaf2; font-size: 14px; }
+  .hide { display: none; }
+  .count { color: var(--muted); font-size: 13px; text-align: right; }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; margin-top: 8px; }
+  .thumbs img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+  .errors { color: var(--bad); font-size: 14px; }
+  #submit { position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 560px; width: 100%; font-size: 17px; padding: 16px; border: 0; background: var(--accent); color: #fff; }
+  #submit:disabled { background: #9ad8b4; }
+  .sum dt { color: var(--muted); font-size: 13px; margin-top: 14px; }
+  .sum dd { margin: 4px 0 0; white-space: pre-wrap; word-break: break-all; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 560px; width: 100%; display: flex; }
+  .bar button { font-size: 17px; padding: 16px; border: 0; }
+  #fix { flex: 0 0 34%; background: var(--chip); color: var(--fg); border-top: 1px solid var(--line); }
+  #approve { flex: 1; background: var(--accent); color: #fff; }
+  #approve:disabled { background: #9ad8b4; }
+  #fix:disabled { color: var(--muted); }
+  #done { text-align: center; padding-top: 48px; }
+  .mic { margin-top: 6px; }
+  .mic.on { background: var(--bad); border-color: var(--bad); color: #fff; }
+</style>
+</head>
+<body>
+<!-- 이 화면은 Apps Script 밖(GitHub Pages)에 올린다 — Apps Script 의 액자(iframe)는 마이크를 막는다.
+     빌드 값은 scripts/build_form_page.js 가 속성으로 채운다. 폼 키는 주소의 ?k= 에서 읽는다 -->
+<div id="boot" hidden data-exec="https://script.google.com/macros/s/AKfycbzqc49bxs8lWRtBpoPzMahAMGAABGI0ARpjP_mD8-z2wKydO6D8u2z4L5CBUpO5d4t9/exec" data-config="{&quot;schema_version&quot;:1,&quot;categories&quot;:[&quot;여행&quot;,&quot;맛집&quot;,&quot;쇼핑&quot;,&quot;일상&quot;],&quot;disclosure&quot;:[&quot;내돈내산&quot;,&quot;협찬&quot;,&quot;제품제공&quot;],&quot;travel_scope&quot;:[&quot;국내&quot;,&quot;해외&quot;],&quot;venue_type&quot;:[&quot;식당&quot;,&quot;카페&quot;],&quot;shopping_sub&quot;:[&quot;패션·잡화&quot;,&quot;뷰티&quot;,&quot;리빙·가전&quot;,&quot;식품&quot;],&quot;daily_sub&quot;:[&quot;웨딩&quot;,&quot;문화생활 (영화·전시·공연)&quot;,&quot;일기&quot;],&quot;memo_min&quot;:20,&quot;memo_max&quot;:2000,&quot;photos_min&quot;:3,&quot;photos_max&quot;:30,&quot;photo_max_bytes&quot;:26214400}"></div>
+<main id="form">
+  <h1>혬드래곤♡ 블로그 글감 보내기</h1>
+
+  <section>
+    <label class="t">어떤 글이에요?</label>
+    <div class="chips" id="category"></div>
+  </section>
+
+  <section id="sec-travel" class="hide">
+    <label class="t">국내 / 해외</label>
+    <div class="chips" id="travel-scope"></div>
+    <div id="travel-domestic" class="hide" style="margin-top:12px">
+      <label class="t">장소 (숙소·관광지)</label>
+      <div class="row"><input type="text" id="travel-q" placeholder="예: 엘로라 호텔"><button type="button" data-search="travel">검색</button></div>
+      <div class="results" id="travel-results"></div>
+      <div class="picked hide" id="travel-picked"></div>
+    </div>
+    <div id="travel-overseas" class="hide" style="margin-top:12px">
+      <label class="t">여행지 (도시·장소 이름)</label>
+      <div class="row"><input type="text" id="geo-q" placeholder="예: 오사카 도톤보리"><button type="button" id="geo-btn">찾기</button></div>
+      <p class="hint">나라·도시를 알기 위해서만 써요. 주소는 글에 들어가지 않아요.</p>
+      <div class="results" id="geo-results"></div>
+      <div class="picked hide" id="geo-picked"></div>
+    </div>
+    <div style="margin-top:12px">
+      <label class="t">여행 주제</label>
+      <input type="text" id="travel-topic" placeholder="예: 에버랜드 근처 1박 호캉스" maxlength="100">
+    </div>
+  </section>
+
+  <section id="sec-restaurant" class="hide">
+    <label class="t">식당 / 카페</label>
+    <div class="chips" id="venue-type"></div>
+    <div style="margin-top:12px">
+      <label class="t">가게</label>
+      <div class="row"><input type="text" id="rest-q" placeholder="예: 어니언 성수"><button type="button" data-search="rest">검색</button></div>
+      <div class="results" id="rest-results"></div>
+      <div class="picked hide" id="rest-picked"></div>
+    </div>
+    <div style="margin-top:12px">
+      <label class="t">먹은 메뉴</label>
+      <input type="text" id="dishes" placeholder="쉼표로 나눠 주세요. 예: 팡도르, 라떼">
+    </div>
+  </section>
+
+  <section id="sec-shopping" class="hide">
+    <label class="t">세부 분류</label>
+    <div class="chips" id="shopping-sub"></div>
+    <div style="margin-top:12px"><label class="t">제품 이름</label><input type="text" id="product"></div>
+    <div style="margin-top:12px"><label class="t">제품 정보</label><textarea id="shop-desc" placeholder="가격, 산 곳, 용량 같은 것"></textarea></div>
+  </section>
+
+  <section id="sec-daily" class="hide">
+    <label class="t">세부 분류</label>
+    <div class="chips" id="daily-sub"></div>
+    <div style="margin-top:12px"><label class="t">주제</label><input type="text" id="daily-topic" maxlength="100" placeholder="예: 국립현대미술관 전시"></div>
+    <div style="margin-top:12px"><label class="t">설명</label><textarea id="daily-desc" placeholder="언제, 어디서, 무엇을"></textarea></div>
+  </section>
+
+  <section>
+    <label class="t">협찬 여부</label>
+    <div class="chips" id="disclosure"></div>
+    <div id="sponsor-box" class="hide" style="margin-top:12px">
+      <label class="t">제공한 업체</label>
+      <input type="text" id="sponsor" placeholder="예: 엘로라 호텔">
+      <p class="hint">글 첫머리에 "제공받아 작성했어요" 문구가 들어가요.</p>
+    </div>
+  </section>
+
+  <section>
+    <label class="t">방문일 (선택)</label>
+    <input type="date" id="visited">
+    <p class="hint">비우면 사진 찍은 날로 적어요.</p>
+  </section>
+
+  <section>
+    <label class="t">소감 (필수)</label>
+    <textarea id="memo" placeholder="좋았던 점, 아쉬운 점, 맛, 분위기, 가격, 누구랑 갔는지. 여기 적은 것만 글에 들어가요."></textarea>
+    <div class="count"><span id="memo-count">0</span>자 (20자 이상)</div>
+  </section>
+
+  <section>
+    <label class="t">사진 (3~30장)</label>
+    <input type="file" id="photos" accept="image/*" multiple>
+    <p class="hint">고른 순서대로 올라가요. 대표 사진이 될 전경 사진을 앞에 두면 좋아요.</p>
+    <div class="thumbs" id="thumbs"></div>
+    <div class="count"><span id="photo-count">0</span>장</div>
+  </section>
+
+  <div class="errors" id="errors"></div>
+  <button id="submit" type="button">보내기</button>
+</main>
+
+<main id="confirm" class="hide">
+  <h1>이대로 보낼까요?</h1>
+  <p class="hint">승인해야 사진이 올라가요. 고칠 게 있으면 "고치기" 를 눌러요 — 적은 것은 그대로 남아 있어요.<br>
+    올리는 동안(보통 1분 안쪽) 이 화면을 켜 두세요. 다른 앱에 다녀오면 멈췄다가 돌아오는 순간 이어서 올려요.</p>
+  <dl class="sum" id="summary"></dl>
+  <div class="thumbs" id="confirm-thumbs"></div>
+  <div class="errors" id="confirm-errors"></div>
+  <div class="bar"><button id="fix" type="button">고치기</button><button id="approve" type="button">승인하고 보내기</button></div>
+</main>
+
+<main id="done" class="hide">
+  <h1>보냈어요!</h1>
+  <p>제출 번호 <b id="done-id"></b></p>
+  <p class="hint">노트북이 글을 만들어 네이버에 임시저장까지 해 둘게요.</p>
+  <button class="btn" type="button" onclick="location.reload()">하나 더 보내기</button>
+</main>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var KEY = new URLSearchParams(location.search).get("k") || "";
+var EXEC = $("boot").getAttribute("data-exec");
+var CFG = JSON.parse($("boot").getAttribute("data-config"));
+var S = { category: null, scope: null, venue: null, shopSub: null, dailySub: null, disclosure: "내돈내산", travelPlace: null, geoPlace: null, restPlace: null, files: [], thumbs: [] };
+var APPROVED = null; // 확인 화면에 보인 그대로의 값. 승인하면 이것만 보낸다
+var SENDING = false;
+
+function chips(el, values, key, onPick) {
+  el.innerHTML = "";
+  values.forEach(function (v) {
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = v;
+    if (S[key] === v) b.className = "on";
+    b.onclick = function () { S[key] = v; chips(el, values, key, onPick); if (onPick) onPick(v); };
+    el.appendChild(b);
+  });
+}
+
+function show(id, on) { $(id).classList.toggle("hide", !on); }
+
+// Apps Script doPost 로 부른다. 본문이 text/plain 이라 CORS 사전 요청이 없다. 서버 거부는 { error }, 연결 실패는 NetworkError
+function server(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return fetch(EXEC, { method: "POST", body: JSON.stringify({ fn: fn, args: [KEY].concat(args) }) })
+    .catch(function (e) { throw "NetworkError: " + (e && e.message ? e.message : e); })
+    .then(function (r) { if (!r.ok) throw "NetworkError: HTTP " + r.status; return r.json(); })
+    .then(function (r) { if (r.error) throw r.error; return r.value; });
+}
+
+function placeLine(p) {
+  return p.source === "naver_local"
+    ? "<b>" + esc(p.name) + "</b><br>" + esc(p.road_address || p.address) + (p.category ? " · " + esc(p.category) : "")
+    : "<b>" + esc(p.name) + "</b><br>" + esc(p.country) + (p.locality ? " · " + esc(p.locality) : "");
+}
+function esc(s) { return String(s || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]; }); }
+
+function renderResults(listEl, pickedEl, items, key) {
+  listEl.innerHTML = items.length ? "" : "<p class='hint'>결과가 없어요. 다른 이름으로 찾아 주세요.</p>";
+  items.forEach(function (p) {
+    var b = document.createElement("button");
+    b.type = "button"; b.innerHTML = placeLine(p);
+    b.onclick = function () { S[key] = p; listEl.innerHTML = ""; pickedEl.innerHTML = "선택: " + placeLine(p); show(pickedEl.id, true); };
+    listEl.appendChild(b);
+  });
+}
+
+function search(kind) {
+  var q = $(kind + "-q").value;
+  var listEl = $(kind + "-results");
+  listEl.innerHTML = "<p class='hint'>찾는 중…</p>";
+  server("searchPlace", q).then(function (items) {
+    renderResults(listEl, $(kind + "-picked"), items, kind === "travel" ? "travelPlace" : "restPlace");
+  }).catch(function (e) { listEl.innerHTML = "<p class='errors'>" + esc(e) + "</p>"; });
+}
+
+function collectForm() {
+  return {
+    category: S.category,
+    disclosure_type: S.disclosure,
+    sponsor: $("sponsor").value,
+    memo: $("memo").value,
+    visited_on: $("visited").value,
+    travel: { scope: S.scope, place: S.scope === "해외" ? S.geoPlace : S.travelPlace, topic: $("travel-topic").value },
+    restaurant: { venue_type: S.venue, place: S.restPlace, dishes: $("dishes").value },
+    shopping: { subcategory: S.shopSub, product_name: $("product").value, description: $("shop-desc").value },
+    daily: { subcategory: S.dailySub, topic: $("daily-topic").value, description: $("daily-desc").value }
+  };
+}
+
+function readBase64(file) {
+  return new Promise(function (resolve, reject) {
+    var fr = new FileReader();
+    fr.onload = function () { resolve(String(fr.result).split(",")[1]); };
+    fr.onerror = function () { reject("사진을 읽지 못했어요: " + file.name); };
+    fr.readAsDataURL(file);
+  });
+}
+
+function preflight() {
+  // 서버의 buildInput 이 최종 판정이다. 여기서는 사진을 올리기 전에 흔한 빠짐만 먼저 알려 준다.
+  var errs = [];
+  var f = collectForm();
+  if (!f.category) errs.push("어떤 글인지 골라 주세요");
+  if (f.memo.trim().length < CFG.memo_min) errs.push("소감을 " + CFG.memo_min + "자 이상 적어 주세요");
+  if (S.files.length < CFG.photos_min || S.files.length > CFG.photos_max) errs.push("사진은 " + CFG.photos_min + "~" + CFG.photos_max + "장이에요");
+  S.files.forEach(function (x) { if (x.size > CFG.photo_max_bytes) errs.push("25MB 넘는 사진: " + x.name); });
+  if (S.disclosure !== "내돈내산" && !f.sponsor.trim()) errs.push("제공한 업체 이름을 적어 주세요");
+  return errs;
+}
+
+function showErrors(id, e) { $(id).innerHTML = esc(e).replace(/\n/g, "<br>"); }
+
+/**
+ * "보내기": 폼 → 서버 checkForm(buildInput 과 같은 판정) → 확인 화면.
+ * 여기까지는 Drive 에 아무것도 쓰지 않는다. 사진은 승인한 뒤에만 올라간다.
+ */
+function review() {
+  var errs = preflight();
+  $("errors").innerHTML = errs.map(esc).join("<br>");
+  if (errs.length) return;
+  var btn = $("submit");
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = "확인 중…";
+  var snap = { form: collectForm(), files: S.files.slice(), thumbs: S.thumbs.slice() };
+  server("checkForm", snap.form, snap.files.length).then(function (r) {
+    if (r.errors.length) throw r.errors.join("\n");
+    openConfirm(snap);
+  }).catch(function (e) {
+    showErrors("errors", e);
+  }).then(function () { btn.disabled = false; btn.textContent = "보내기"; });
+}
+
+function placeText(p) {
+  if (!p) return "(고르지 않음)";
+  return p.source === "naver_local" ? p.name + " · " + (p.road_address || p.address) : p.name + " · " + p.country + (p.locality ? " " + p.locality : "");
+}
+
+function listText(s) { return String(s || "").split(/[,\n]/).map(function (x) { return x.trim(); }).filter(function (x) { return x; }).join(", "); }
+
+function summaryRows(snap) {
+  var f = snap.form;
+  var sub = { "여행": f.travel.scope, "맛집": f.restaurant.venue_type, "쇼핑": f.shopping.subcategory, "일상": f.daily.subcategory }[f.category];
+  var rows = [["어떤 글", f.category + (sub ? " · " + sub : "")]];
+  if (f.category === "여행") {
+    rows.push([f.travel.scope === "해외" ? "여행지" : "장소", placeText(f.travel.place)], ["여행 주제", f.travel.topic.trim()]);
+  } else if (f.category === "맛집") {
+    rows.push(["가게", placeText(f.restaurant.place)], ["먹은 메뉴", listText(f.restaurant.dishes)]);
+  } else if (f.category === "쇼핑") {
+    rows.push(["제품 이름", f.shopping.product_name.trim()], ["제품 정보", f.shopping.description.trim()]);
+  } else if (f.category === "일상") {
+    rows.push(["주제", f.daily.topic.trim()], ["설명", f.daily.description.trim()]);
+  }
+  rows.push(["협찬", f.disclosure_type === "내돈내산" ? "내돈내산" : f.disclosure_type + " · " + f.sponsor.trim() + " (글 첫머리에 표기)"]);
+  rows.push(["방문일", f.visited_on || "비움 (사진 찍은 날로 적어요)"]);
+  rows.push(["소감", f.memo.trim()]);
+  rows.push(["사진", snap.files.length + "장"]);
+  return rows;
+}
+
+function openConfirm(snap) {
+  APPROVED = snap;
+  $("summary").innerHTML = summaryRows(snap).map(function (r) { return "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>"; }).join("");
+  $("confirm-thumbs").innerHTML = "";
+  snap.thumbs.forEach(function (url) { var img = document.createElement("img"); img.src = url; $("confirm-thumbs").appendChild(img); });
+  $("confirm-errors").innerHTML = "";
+  $("approve").disabled = false; $("approve").textContent = "승인하고 보내기"; $("fix").disabled = false;
+  show("form", false); show("confirm", true); window.scrollTo(0, 0);
+}
+
+/** "고치기": 확인 화면만 닫는다. 폼 칸은 건드리지 않았으니 적은 값이 그대로 있다. */
+function backToForm() {
+  if (SENDING) return;
+  APPROVED = null;
+  show("confirm", false); show("form", true);
+}
+
+// ---- 사진 준비: 휴대폰 원본(4~6천 px, 한 장 3~5MB)을 그대로 올리면 한 장에 30초가 넘는다 (2026-09-28 실측).
+// STEP1 이 어차피 긴 변 1600px 로 줄이므로 여기서 PREP_EDGE 로 줄여 JPEG 로 보낸다.
+// 방문일을 뽑는 촬영일(EXIF)은 원본에서 떼어 붙이고, 방향은 그림에 이미 반영했으니 1 로 고친다.
+var PREP_EDGE = 2048;
+var PREP_QUALITY = 0.85;
+var PREP_KEEP_BYTES = 1.2 * 1024 * 1024; // 이보다 작고 긴 변도 PREP_EDGE 이하면 원본 그대로
+var UPLOAD_PARALLEL = 3;
+
+function readArrayBuffer(blob) {
+  return new Promise(function (resolve, reject) {
+    var fr = new FileReader();
+    fr.onload = function () { resolve(fr.result); };
+    fr.onerror = function () { reject("사진을 읽지 못했어요"); };
+    fr.readAsArrayBuffer(blob);
+  });
+}
+
+/** JPEG 바이트에서 EXIF APP1 조각(FF E1 … "Exif\0\0" …)을 그대로 떼어 낸다. 없으면 null */
+function jpegExifSegment(b) {
+  if (b[0] !== 0xFF || b[1] !== 0xD8) return null;
+  var off = 2;
+  while (off + 4 <= b.length && b[off] === 0xFF) {
+    var marker = b[off + 1];
+    if (marker === 0xDA || marker === 0xD9) break;
+    var size = (b[off + 2] << 8) | b[off + 3];
+    if (marker === 0xE1 && b[off + 4] === 0x45 && b[off + 5] === 0x78 && b[off + 6] === 0x69 && b[off + 7] === 0x66) return b.slice(off, off + 2 + size);
+    off += 2 + size;
+  }
+  return null;
+}
+
+/** EXIF 조각의 IFD0 Orientation(0x0112)을 1 로. 그림은 이미 바로 세워 그렸다 — 두 번 돌지 않게 */
+function exifUpright(seg) {
+  var t = 10; // FF E1 len(2) "Exif\0\0" 다음이 TIFF 머리
+  var le = seg[t] === 0x49;
+  var r16 = function (o) { return le ? seg[o] | (seg[o + 1] << 8) : (seg[o] << 8) | seg[o + 1]; };
+  var r32 = function (o) { return le ? (seg[o] | (seg[o + 1] << 8) | (seg[o + 2] << 16) | (seg[o + 3] << 24)) >>> 0 : ((seg[o] << 24) | (seg[o + 1] << 16) | (seg[o + 2] << 8) | seg[o + 3]) >>> 0; };
+  var ifd = t + r32(t + 4);
+  if (ifd + 2 > seg.length) return seg;
+  for (var i = 0, n = r16(ifd); i < n; i++) {
+    var e = ifd + 2 + i * 12;
+    if (e + 12 > seg.length) break;
+    if (r16(e) === 0x0112) { seg[e + 8] = le ? 1 : 0; seg[e + 9] = le ? 0 : 1; }
+  }
+  return seg;
+}
+
+function loadImage(file) {
+  return new Promise(function (resolve, reject) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = function () { URL.revokeObjectURL(url); reject("열 수 없는 사진"); };
+    img.src = url;
+  });
+}
+
+/** 파일 → { blob, type, name }. 줄이지 못하면(이 브라우저가 못 여는 HEIC 등) 원본 그대로 — 느려도 빠지지는 않게 */
+function preparePhoto(file) {
+  var original = { blob: file, type: file.type, name: file.name };
+  return loadImage(file).then(function (img) {
+    var w = img.naturalWidth, h = img.naturalHeight, edge = Math.max(w, h);
+    if (!edge || (edge <= PREP_EDGE && file.size <= PREP_KEEP_BYTES)) return original;
+    var s = Math.min(1, PREP_EDGE / edge);
+    var c = document.createElement("canvas");
+    c.width = Math.round(w * s); c.height = Math.round(h * s);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return new Promise(function (resolve) { c.toBlob(resolve, "image/jpeg", PREP_QUALITY); }).then(function (out) {
+      if (!out || out.size >= file.size) return original;
+      var name = file.name.replace(/\.[^.]*$/, "") + ".jpg";
+      return readArrayBuffer(file.slice(0, 256 * 1024)).then(function (head) {
+        var seg = jpegExifSegment(new Uint8Array(head));
+        if (!seg) return { blob: out, type: "image/jpeg", name: name };
+        return readArrayBuffer(out).then(function (ob) {
+          var j = new Uint8Array(ob), up = exifUpright(seg), all = new Uint8Array(j.length + up.length);
+          all.set(j.subarray(0, 2), 0); all.set(up, 2); all.set(j.subarray(2), 2 + up.length); // SOI 바로 뒤에 EXIF
+          return { blob: new Blob([all], { type: "image/jpeg" }), type: "image/jpeg", name: name };
+        });
+      });
+    });
+  }).catch(function () { return original; });
+}
+
+// 준비(디코딩)는 한 장씩 — 휴대폰 메모리. 올리기만 동시에 한다
+var PREP_CHAIN = Promise.resolve();
+function preparePhotoInTurn(file) {
+  var p = PREP_CHAIN.then(function () { return preparePhoto(file); });
+  PREP_CHAIN = p.catch(function () {});
+  return p;
+}
+
+// ---- 끊겨도 이어서: 네트워크 오류는 다시 시도한다. 다른 앱에 가 있는 동안(화면 숨김)에는 기다렸다가 돌아오면 이어서
+function isNetworkError(e) { return /NetworkError|HTTP \d|네트워크|network|timed? ?out|시간 초과/i.test(String(e)); }
+function whenVisible() {
+  if (!document.hidden) return Promise.resolve();
+  return new Promise(function (resolve) {
+    var h = function () { if (!document.hidden) { document.removeEventListener("visibilitychange", h); resolve(); } };
+    document.addEventListener("visibilitychange", h);
+  });
+}
+function withRetry(call) {
+  var delays = window.FORM_RETRY_DELAYS || [1000, 3000, 8000, 15000];
+  var attempt = function (i) {
+    return whenVisible().then(call).catch(function (e) {
+      if (!isNetworkError(e) || i >= delays.length) throw e;
+      return new Promise(function (r) { setTimeout(r, delays[i]); }).then(function () { return attempt(i + 1); });
+    });
+  };
+  return attempt(0);
+}
+
+var WAKE = null;
+function holdScreen() {
+  try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (w) { WAKE = w; }, function () {}); } catch (e) { /* 안 되는 브라우저 */ }
+}
+function releaseScreen() { try { if (WAKE) WAKE.release(); } catch (e) { /* 무시 */ } WAKE = null; }
+document.addEventListener("visibilitychange", function () { if (SENDING && !document.hidden) holdScreen(); });
+
+/** 진행 중인 제출. 실패해도 남겨 두고 "다시 보내기" 는 같은 제출 폴더에 남은 사진만 올린다 */
+var JOB = null;
+function sameFiles(a, b) { return a.length === b.length && a.every(function (f, i) { return f === b[i]; }); }
+
+function uploadAll(job, btn) {
+  var files = job.snap.files, n = files.length, next = 0, failed = null;
+  var done = function () { return job.rel.filter(Boolean).length; };
+  var progress = function () { btn.textContent = "사진 올리는 중 " + done() + "/" + n; };
+  var worker = function () {
+    while (next < n && job.rel[next]) next++;
+    if (failed || next >= n) return Promise.resolve();
+    var i = next++;
+    return preparePhotoInTurn(files[i])
+      .then(function (p) { return readBase64(p.blob).then(function (b64) { return withRetry(function () { return server("uploadPhoto", job.sub.id, i + 1, p.type, p.name, b64); }); }); })
+      .then(function (rel) { job.rel[i] = rel; progress(); }, function (e) { failed = failed || e; })
+      .then(worker);
+  };
+  progress();
+  var ws = [];
+  for (var k = 0; k < Math.min(UPLOAD_PARALLEL, n); k++) ws.push(worker());
+  return Promise.all(ws).then(function () { if (failed) throw failed; });
+}
+
+/** "승인하고 보내기": 확인 화면에 보인 값 그대로 beginSubmission → uploadPhoto×N(3장씩) → finishSubmission. 한 번만. */
+function send() {
+  if (SENDING || !APPROVED) return;
+  SENDING = true;
+  if (!JOB || !sameFiles(JOB.snap.files, APPROVED.files)) JOB = { snap: APPROVED, sub: null, rel: [] };
+  JOB.snap = APPROVED; // 사진이 같으면 고친 글만 바꿔 이어서 보낸다
+  var job = JOB;
+  var btn = $("approve");
+  btn.disabled = true; $("fix").disabled = true;
+  $("confirm-errors").innerHTML = "";
+  holdScreen();
+  (job.sub ? Promise.resolve(job.sub) : withRetry(function () { return server("beginSubmission"); }).then(function (s) { job.sub = s; return s; }))
+    .then(function () { return uploadAll(job, btn); })
+    .then(function () {
+      btn.textContent = "마무리 중…";
+      var photos = job.rel.map(function (rel) { return { file: rel }; });
+      return withRetry(function () { return server("finishSubmission", job.sub.id, job.sub.submitted_at, job.snap.form, photos); });
+    }).then(function (r) {
+      if (!r.ok) throw r.errors.join("\n");
+      JOB = null;
+      show("confirm", false); show("done", true); $("done-id").textContent = r.id;
+    }).catch(function (e) {
+      showErrors("confirm-errors", e + (isNetworkError(e) ? "\n인터넷이 잠깐 끊겼어요. \"다시 보내기\" 를 누르면 올린 사진은 두고 남은 것만 이어서 보내요." : ""));
+      SENDING = false;
+      btn.disabled = false; btn.textContent = "다시 보내기"; $("fix").disabled = false;
+    }).then(releaseScreen);
+}
+
+chips($("category"), CFG.categories, "category", function (v) {
+  show("sec-travel", v === "여행"); show("sec-restaurant", v === "맛집"); show("sec-shopping", v === "쇼핑"); show("sec-daily", v === "일상");
+});
+chips($("travel-scope"), CFG.travel_scope, "scope", function (v) { show("travel-domestic", v === "국내"); show("travel-overseas", v === "해외"); });
+chips($("venue-type"), CFG.venue_type, "venue");
+chips($("shopping-sub"), CFG.shopping_sub, "shopSub");
+chips($("daily-sub"), CFG.daily_sub, "dailySub");
+chips($("disclosure"), CFG.disclosure, "disclosure", function (v) { show("sponsor-box", v !== "내돈내산"); });
+document.querySelectorAll("[data-search]").forEach(function (b) { b.onclick = function () { search(b.getAttribute("data-search")); }; });
+$("geo-btn").onclick = function () {
+  var listEl = $("geo-results");
+  listEl.innerHTML = "<p class='hint'>찾는 중…</p>";
+  server("geocodePlace", $("geo-q").value).then(function (items) { renderResults(listEl, $("geo-picked"), items, "geoPlace"); })
+    .catch(function (e) { listEl.innerHTML = "<p class='errors'>" + esc(e) + "</p>"; });
+};
+$("memo").oninput = function () { $("memo-count").textContent = $("memo").value.trim().length; };
+
+// 음성 받아쓰기: 긴 칸마다 🎤 버튼. 한 마디가 끝나면 브라우저가 멈추므로 끌 때까지 다시 켠다.
+// 못 하는 브라우저·권한 거부면 키보드의 마이크를 쓰라고 알린다
+var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+document.querySelectorAll("#form textarea").forEach(function (ta) {
+  var b = document.createElement("button");
+  var note = document.createElement("p");
+  b.type = "button"; b.className = "btn mic"; note.className = "hint";
+  ta.insertAdjacentElement("afterend", b);
+  b.insertAdjacentElement("afterend", note);
+  var on = false, rec = null;
+  function paint() { b.textContent = on ? "■ 그만 듣기" : "🎤 말로 적기"; b.classList.toggle("on", on); }
+  function start() {
+    var base = ta.value;
+    rec = new Rec();
+    rec.lang = "ko-KR"; rec.interimResults = true;
+    rec.onresult = function (e) {
+      var t = "";
+      for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+      ta.value = base + (base && !/\s$/.test(base) ? " " : "") + t.trim();
+      ta.dispatchEvent(new Event("input"));
+    };
+    rec.onerror = function (e) {
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      on = false; paint(); // 오류 뒤 onend 를 안 주는 브라우저가 있다 (2026-10-04 실측: 버튼이 "그만 듣기" 로 남았다)
+      note.textContent = /not-allowed/.test(e.error) ? "마이크를 쓸 수 없어요. 주소창의 권한에서 마이크를 허용하거나, 키보드의 🎤 버튼으로 말해 주세요."
+        : "받아쓰기가 멈췄어요 (" + e.error + "). 다시 눌러 주세요.";
+    };
+    rec.onend = function () { if (on) start(); else paint(); };
+    try { rec.start(); } catch (err) { on = false; paint(); note.textContent = "받아쓰기를 시작하지 못했어요. 다시 눌러 주세요."; }
+  }
+  b.onclick = function () {
+    if (!Rec) { note.textContent = "이 브라우저는 받아쓰기를 못 해요. 키보드의 🎤 버튼을 눌러 말해 주세요."; return; }
+    note.textContent = "";
+    on = !on;
+    if (on) start(); else rec.stop();
+    paint();
+  };
+  paint();
+});
+$("photos").onchange = function () {
+  S.thumbs.forEach(function (u) { URL.revokeObjectURL(u); });
+  S.files = Array.prototype.slice.call($("photos").files);
+  S.thumbs = S.files.map(function (f) { return URL.createObjectURL(f); });
+  $("photo-count").textContent = S.files.length;
+  $("thumbs").innerHTML = "";
+  S.thumbs.slice(0, 30).forEach(function (u) { var img = document.createElement("img"); img.src = u; $("thumbs").appendChild(img); });
+};
+$("submit").onclick = review;
+$("fix").onclick = backToForm;
+$("approve").onclick = send;
+</script>
+</body>
+</html>
