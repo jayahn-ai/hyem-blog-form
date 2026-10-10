@@ -43,6 +43,9 @@
   #done { text-align: center; padding-top: 48px; }
   .mic { margin-top: 6px; }
   .mic.on { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .info { margin-top: 8px; padding: 10px; border-radius: 8px; background: #f7f7f7; font-size: 14px; }
+  .info p { margin: 4px 0; }
+  .info .chips button { padding: 6px 10px; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -91,10 +94,12 @@
       <div class="row"><input type="text" id="rest-q" placeholder="예: 어니언 성수"><button type="button" data-search="rest">검색</button></div>
       <div class="results" id="rest-results"></div>
       <div class="picked hide" id="rest-picked"></div>
+      <div class="info hide" id="rest-info"></div>
     </div>
     <div style="margin-top:12px">
       <label class="t">먹은 메뉴</label>
       <input type="text" id="dishes" placeholder="쉼표로 나눠 주세요. 예: 팡도르, 라떼">
+      <p class="hint">가게를 고르면 네이버 메뉴가 나와요. 눌러서 고르거나 적어도 돼요 — 메뉴판에 없는 이름이면 알려 드려요.</p>
     </div>
   </section>
 
@@ -168,7 +173,7 @@ var $ = function (id) { return document.getElementById(id); };
 var KEY = new URLSearchParams(location.search).get("k") || "";
 var EXEC = $("boot").getAttribute("data-exec");
 var CFG = JSON.parse($("boot").getAttribute("data-config"));
-var S = { category: null, scope: null, venue: null, restSub: null, shopSub: null, dailySub: null, disclosure: "내돈내산", travelPlace: null, geoPlace: null, restPlace: null, files: [], thumbs: [] };
+var S = { placeInfo: null, infoLines: [], category: null, scope: null, venue: null, restSub: null, shopSub: null, dailySub: null, disclosure: "내돈내산", travelPlace: null, geoPlace: null, restPlace: null, files: [], thumbs: [] };
 var APPROVED = null; // 확인 화면에 보인 그대로의 값. 승인하면 이것만 보낸다
 var SENDING = false;
 
@@ -206,12 +211,12 @@ function placeLine(p) {
 }
 function esc(s) { return String(s || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]; }); }
 
-function renderResults(listEl, pickedEl, items, key) {
+function renderResults(listEl, pickedEl, items, key, onPick) {
   listEl.innerHTML = items.length ? "" : "<p class='hint'>결과가 없어요. 다른 이름으로 찾아 주세요.</p>";
   items.forEach(function (p) {
     var b = document.createElement("button");
     b.type = "button"; b.innerHTML = placeLine(p);
-    b.onclick = function () { S[key] = p; listEl.innerHTML = ""; pickedEl.innerHTML = "선택: " + placeLine(p); show(pickedEl.id, true); };
+    b.onclick = function () { S[key] = p; listEl.innerHTML = ""; pickedEl.innerHTML = "선택: " + placeLine(p); show(pickedEl.id, true); if (onPick) onPick(); };
     listEl.appendChild(b);
   });
 }
@@ -221,8 +226,38 @@ function search(kind) {
   var listEl = $(kind + "-results");
   listEl.innerHTML = "<p class='hint'>찾는 중…</p>";
   server("searchPlace", q).then(function (items) {
-    renderResults(listEl, $(kind + "-picked"), items, kind === "travel" ? "travelPlace" : "restPlace");
+    renderResults(listEl, $(kind + "-picked"), items, kind === "travel" ? "travelPlace" : "restPlace", kind === "rest" ? loadPlaceInfo : null);
   }).catch(function (e) { listEl.innerHTML = "<p class='errors'>" + esc(e) + "</p>"; });
+}
+
+/** 가게를 고르면 네이버 플레이스에서 영업시간·주차·메뉴를 받아 보여 준다. 못 받으면 보내기가 막힌다 (맛집 필수) */
+function loadPlaceInfo() {
+  var box = $("rest-info"), place = S.restPlace;
+  S.placeInfo = null; S.infoLines = [];
+  if (!place) { show("rest-info", false); return; }
+  show("rest-info", true);
+  box.innerHTML = "<p class='hint'>네이버에서 가게 정보를 확인하는 중… (10초쯤)</p>";
+  withRetry(function () { return server("placeInfo", place); }).then(function (r) {
+    if (S.restPlace !== place) return; // 그 사이 다른 가게를 골랐다
+    S.placeInfo = r.info; S.infoLines = r.lines;
+    var html = r.lines.filter(function (l) { return l.indexOf("메뉴 ") !== 0; }).map(function (l) { return "<p>" + esc(l) + "</p>"; }).join("");
+    html += r.info.menus.length ? "<p class='hint'>메뉴 (눌러서 먹은 메뉴에 넣기)</p><div class='chips' id='menu-chips'></div>" : "<p class='hint'>네이버에 등록된 메뉴가 없어요. 먹은 메뉴를 직접 적어 주세요.</p>";
+    box.innerHTML = html;
+    r.info.menus.forEach(function (m) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = m.name + (m.price ? " " + m.price : "");
+      b.onclick = function () {
+        var cur = listText($("dishes").value).split(", ").filter(function (x) { return x; });
+        if (cur.indexOf(m.name) < 0) cur.push(m.name);
+        $("dishes").value = cur.join(", ");
+      };
+      $("menu-chips").appendChild(b);
+    });
+  }).catch(function (e) {
+    if (S.restPlace !== place) return;
+    box.innerHTML = "<p class='errors'>" + esc(e) + "</p><button type='button' class='btn' id='info-retry'>다시 불러오기</button>";
+    $("info-retry").onclick = loadPlaceInfo;
+  });
 }
 
 function collectForm() {
@@ -233,7 +268,7 @@ function collectForm() {
     memo: $("memo").value,
     visited_on: $("visited").value,
     travel: { scope: S.scope, place: S.scope === "해외" ? S.geoPlace : S.travelPlace, topic: $("travel-topic").value },
-    restaurant: { subcategory: S.restSub, venue_type: S.venue, place: S.restPlace, dishes: $("dishes").value },
+    restaurant: { subcategory: S.restSub, venue_type: S.venue, place: S.restPlace, dishes: $("dishes").value, place_info: S.placeInfo },
     shopping: { subcategory: S.shopSub, product_name: $("product").value, description: $("shop-desc").value },
     daily: { subcategory: S.dailySub, topic: $("daily-topic").value, description: $("daily-desc").value }
   };
@@ -256,6 +291,7 @@ function preflight() {
   if (f.memo.trim().length < CFG.memo_min) errs.push("소감을 " + CFG.memo_min + "자 이상 적어 주세요");
   if (S.files.length < CFG.photos_min || S.files.length > CFG.photos_max) errs.push("사진은 " + CFG.photos_min + "~" + CFG.photos_max + "장이에요");
   S.files.forEach(function (x) { if (x.size > CFG.photo_max_bytes) errs.push("25MB 넘는 사진: " + x.name); });
+  if (f.category === "맛집" && !S.placeInfo) errs.push("네이버 가게 정보(영업시간·메뉴·주차)가 아직 안 왔어요. 가게를 고른 뒤 정보가 보일 때까지 기다려 주세요");
   if (S.disclosure !== "내돈내산" && !f.sponsor.trim()) errs.push("제공한 업체 이름을 적어 주세요");
   return errs;
 }
@@ -276,6 +312,7 @@ function review() {
   var snap = { form: collectForm(), files: S.files.slice(), thumbs: S.thumbs.slice() };
   server("checkForm", snap.form, snap.files.length).then(function (r) {
     if (r.errors.length) throw r.errors.join("\n");
+    if (r.dishes) snap.form.restaurant.dishes = r.dishes.join(", "); // 메뉴판 이름으로 바로잡힌 것을 확인 화면에 보이고 그대로 보낸다
     openConfirm(snap);
   }).catch(function (e) {
     showErrors("errors", e);
@@ -297,6 +334,7 @@ function summaryRows(snap) {
     rows.push([f.travel.scope === "해외" ? "여행지" : "장소", placeText(f.travel.place)], ["여행 주제", f.travel.topic.trim()]);
   } else if (f.category === "맛집") {
     rows.push(["가게", placeText(f.restaurant.place)], ["먹은 메뉴", listText(f.restaurant.dishes)]);
+    rows.push(["가게 정보 (네이버)", S.infoLines.filter(function (l) { return l.indexOf("메뉴 ") !== 0; }).join(", ")]);
   } else if (f.category === "쇼핑") {
     rows.push(["제품 이름", f.shopping.product_name.trim()], ["제품 정보", f.shopping.description.trim()]);
   } else if (f.category === "일상") {
@@ -516,11 +554,13 @@ $("memo").oninput = function () { $("memo-count").textContent = $("memo").value.
 // 음성 받아쓰기: 긴 칸마다 🎤 버튼. 한 마디가 끝나면 브라우저가 멈추므로 끌 때까지 다시 켠다.
 // 못 하는 브라우저·권한 거부면 키보드의 마이크를 쓰라고 알린다
 var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-document.querySelectorAll("#form textarea").forEach(function (ta) {
+// 글자를 적는 칸 전부(긴 칸·한 줄 칸·검색 칸). 검색 칸은 옆에 검색 버튼이 있어 줄(.row) 아래에 붙인다
+document.querySelectorAll("#form textarea, #form input[type=text]").forEach(function (ta) {
   var b = document.createElement("button");
   var note = document.createElement("p");
+  var anchor = ta.parentElement.classList.contains("row") ? ta.parentElement : ta;
   b.type = "button"; b.className = "btn mic"; note.className = "hint";
-  ta.insertAdjacentElement("afterend", b);
+  anchor.insertAdjacentElement("afterend", b);
   b.insertAdjacentElement("afterend", note);
   var on = false, rec = null;
   function paint() { b.textContent = on ? "■ 그만 듣기" : "🎤 말로 적기"; b.classList.toggle("on", on); }
