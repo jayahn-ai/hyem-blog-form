@@ -48,7 +48,7 @@
 <body>
 <!-- 이 화면은 Apps Script 밖(GitHub Pages)에 올린다 — Apps Script 의 액자(iframe)는 마이크를 막는다.
      빌드 값은 scripts/build_form_page.js 가 속성으로 채운다. 폼 키는 주소의 ?k= 에서 읽는다 -->
-<div id="boot" hidden data-exec="https://script.google.com/macros/s/AKfycbzqc49bxs8lWRtBpoPzMahAMGAABGI0ARpjP_mD8-z2wKydO6D8u2z4L5CBUpO5d4t9/exec" data-config="{&quot;schema_version&quot;:1,&quot;categories&quot;:[&quot;여행&quot;,&quot;맛집&quot;,&quot;쇼핑&quot;,&quot;일상&quot;],&quot;disclosure&quot;:[&quot;내돈내산&quot;,&quot;협찬&quot;,&quot;제품제공&quot;],&quot;travel_scope&quot;:[&quot;국내&quot;,&quot;해외&quot;],&quot;venue_type&quot;:[&quot;식당&quot;,&quot;카페&quot;],&quot;shopping_sub&quot;:[&quot;음식&quot;,&quot;리빙&quot;,&quot;패션&quot;,&quot;기타&quot;],&quot;daily_sub&quot;:[&quot;일기장&quot;,&quot;결혼&quot;,&quot;부동산&quot;,&quot;주식&quot;],&quot;memo_min&quot;:20,&quot;memo_max&quot;:2000,&quot;photos_min&quot;:3,&quot;photos_max&quot;:30,&quot;photo_max_bytes&quot;:26214400}"></div>
+<div id="boot" hidden data-exec="https://script.google.com/macros/s/AKfycbzqc49bxs8lWRtBpoPzMahAMGAABGI0ARpjP_mD8-z2wKydO6D8u2z4L5CBUpO5d4t9/exec" data-config="{&quot;schema_version&quot;:1,&quot;categories&quot;:[&quot;여행&quot;,&quot;맛집&quot;,&quot;쇼핑&quot;,&quot;일상&quot;],&quot;disclosure&quot;:[&quot;내돈내산&quot;,&quot;협찬&quot;,&quot;제품제공&quot;],&quot;travel_scope&quot;:[&quot;국내&quot;,&quot;해외&quot;],&quot;venue_type&quot;:[&quot;식당&quot;,&quot;카페&quot;],&quot;restaurant_sub&quot;:[&quot;서울&quot;,&quot;경기&quot;,&quot;인천&quot;,&quot;충청&quot;,&quot;강원&quot;,&quot;경상도&quot;,&quot;전라도&quot;,&quot;제주도&quot;],&quot;shopping_sub&quot;:[&quot;음식&quot;,&quot;리빙&quot;,&quot;패션&quot;,&quot;기타&quot;],&quot;daily_sub&quot;:[&quot;일기장&quot;,&quot;결혼&quot;,&quot;부동산&quot;,&quot;주식&quot;],&quot;memo_min&quot;:20,&quot;memo_max&quot;:2000,&quot;photos_min&quot;:3,&quot;photos_max&quot;:30,&quot;photo_max_bytes&quot;:26214400}"></div>
 <main id="form">
   <h1>혬드래곤♡ 블로그 글감 보내기</h1>
 
@@ -80,8 +80,12 @@
   </section>
 
   <section id="sec-restaurant" class="hide">
-    <label class="t">식당 / 카페</label>
-    <div class="chips" id="venue-type"></div>
+    <label class="t">지역</label>
+    <div class="chips" id="restaurant-sub"></div>
+    <div style="margin-top:12px">
+      <label class="t">식당 / 카페</label>
+      <div class="chips" id="venue-type"></div>
+    </div>
     <div style="margin-top:12px">
       <label class="t">가게</label>
       <div class="row"><input type="text" id="rest-q" placeholder="예: 어니언 성수"><button type="button" data-search="rest">검색</button></div>
@@ -164,7 +168,7 @@ var $ = function (id) { return document.getElementById(id); };
 var KEY = new URLSearchParams(location.search).get("k") || "";
 var EXEC = $("boot").getAttribute("data-exec");
 var CFG = JSON.parse($("boot").getAttribute("data-config"));
-var S = { category: null, scope: null, venue: null, shopSub: null, dailySub: null, disclosure: "내돈내산", travelPlace: null, geoPlace: null, restPlace: null, files: [], thumbs: [] };
+var S = { category: null, scope: null, venue: null, restSub: null, shopSub: null, dailySub: null, disclosure: "내돈내산", travelPlace: null, geoPlace: null, restPlace: null, files: [], thumbs: [] };
 var APPROVED = null; // 확인 화면에 보인 그대로의 값. 승인하면 이것만 보낸다
 var SENDING = false;
 
@@ -229,7 +233,7 @@ function collectForm() {
     memo: $("memo").value,
     visited_on: $("visited").value,
     travel: { scope: S.scope, place: S.scope === "해외" ? S.geoPlace : S.travelPlace, topic: $("travel-topic").value },
-    restaurant: { venue_type: S.venue, place: S.restPlace, dishes: $("dishes").value },
+    restaurant: { subcategory: S.restSub, venue_type: S.venue, place: S.restPlace, dishes: $("dishes").value },
     shopping: { subcategory: S.shopSub, product_name: $("product").value, description: $("shop-desc").value },
     daily: { subcategory: S.dailySub, topic: $("daily-topic").value, description: $("daily-desc").value }
   };
@@ -287,7 +291,7 @@ function listText(s) { return String(s || "").split(/[,\n]/).map(function (x) { 
 
 function summaryRows(snap) {
   var f = snap.form;
-  var sub = { "여행": f.travel.scope, "맛집": f.restaurant.venue_type, "쇼핑": f.shopping.subcategory, "일상": f.daily.subcategory }[f.category];
+  var sub = { "여행": f.travel.scope, "맛집": [f.restaurant.subcategory, f.restaurant.venue_type].filter(Boolean).join(" · "), "쇼핑": f.shopping.subcategory, "일상": f.daily.subcategory }[f.category];
   var rows = [["어떤 글", f.category + (sub ? " · " + sub : "")]];
   if (f.category === "여행") {
     rows.push([f.travel.scope === "해외" ? "여행지" : "장소", placeText(f.travel.place)], ["여행 주제", f.travel.topic.trim()]);
@@ -495,6 +499,7 @@ chips($("category"), CFG.categories, "category", function (v) {
   show("sec-travel", v === "여행"); show("sec-restaurant", v === "맛집"); show("sec-shopping", v === "쇼핑"); show("sec-daily", v === "일상");
 });
 chips($("travel-scope"), CFG.travel_scope, "scope", function (v) { show("travel-domestic", v === "국내"); show("travel-overseas", v === "해외"); });
+chips($("restaurant-sub"), CFG.restaurant_sub, "restSub");
 chips($("venue-type"), CFG.venue_type, "venue");
 chips($("shopping-sub"), CFG.shopping_sub, "shopSub");
 chips($("daily-sub"), CFG.daily_sub, "dailySub");
