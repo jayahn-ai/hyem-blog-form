@@ -73,6 +73,8 @@
   .st-writing, .st-ready { --tone: #2b74d8; --tint: #e8f0fb; }
   .st-uploading, .st-broken { --tone: #e09b00; --tint: #fdf3dc; }
   .st-failed, .st-stalled { --tone: #d33; --tint: #fbe9e9; }
+  .st-retry { --tone: #2b74d8; --tint: #e8f0fb; }
+  .card .retry { width: 100%; margin-top: 10px; background: #fff; border-color: var(--tone); color: var(--tone); font-weight: 600; }
   @media (max-width: 400px) { .card .mid { flex-direction: column; align-items: stretch; } .steps { flex-basis: auto; margin-top: 4px; } }
 </style>
 </head>
@@ -640,7 +642,7 @@ $("photos").onchange = function () {
 };
 // ---- 보낸 글감 (서버 listSubmissions, 상태 판정은 Input.gs submissionStatus). 목록이 실패해도 보내기는 막지 않는다
 var LIST = { timer: null, live: false, fresh: null };
-var LIVE_STATES = { writing: 1, ready: 1, uploading: 1 };
+var LIVE_STATES = { writing: 1, ready: 1, uploading: 1, retry: 1 };
 function cardHtml(it) {
   var cut = it.state === "broken" || it.state === "uploading";
   var name = it.label || (it.state === "uploading" ? "올리는 중인 글감" : "올리다 멈춘 글감");
@@ -649,8 +651,20 @@ function cardHtml(it) {
   return "<div class='card st-" + esc(it.state) + (it.id === LIST.fresh ? " new" : "") + "'>" +
     "<div class='top'><span class='badge'>" + esc(it.badge) + "</span><span class='when'>" + esc(it.sent) + " 보냄</span></div>" +
     "<div class='mid'><div><div class='name'>" + esc(name) + "</div><div class='sub'>" + esc(sub) + "</div></div><ol class='steps'>" + steps + "</ol></div>" +
-    "<p class='line'>" + esc(it.line) + "</p></div>";
+    "<p class='line'>" + esc(it.line) + "</p>" +
+    (it.canRetry ? "<button class='btn retry' type='button' data-retry='" + esc(it.id) + "'>다시 시작</button><p class='hint'>멈춘 단계부터 다시 써서 임시저장까지 해요. 하루 2건 한도는 그대로예요.</p>" : "") +
+    "</div>";
 }
+// "다시 시작" (2026-11-09 Jay): 서버가 _RETRY 를 남기고, 본체가 다음 주기(3분)에 멈춘 단계부터 잇는다
+$("sent-list").addEventListener("click", function (e) {
+  var b = e.target.closest("[data-retry]");
+  if (!b || b.disabled) return;
+  b.disabled = true; b.textContent = "맡기는 중…";
+  server("retrySubmission", b.getAttribute("data-retry")).then(function () { loadList(); }, function (err) {
+    b.disabled = false; b.textContent = "다시 시작";
+    $("sent-errors").textContent = String(err).replace(/^NetworkError: .*/, "인터넷이 잠깐 끊겼어요. 다시 눌러 주세요.");
+  });
+});
 function renderList(r) {
   $("sent-errors").textContent = "";
   $("machine").className = "machine " + (r.machineOn ? "on" : "off");
