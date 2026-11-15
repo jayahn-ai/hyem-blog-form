@@ -212,7 +212,7 @@ var $ = function (id) { return document.getElementById(id); };
 var KEY = new URLSearchParams(location.search).get("k") || "";
 var EXEC = $("boot").getAttribute("data-exec");
 var CFG = JSON.parse($("boot").getAttribute("data-config"));
-var S = { placeInfo: null, infoLines: [], category: null, scope: null, venue: null, restSub: null, shopSub: null, dailySub: null, disclosure: "내돈내산", travelPlace: null, geoPlace: null, restPlace: null, files: [], thumbs: [] };
+var S = { placeInfo: null, placeInfoLater: false, infoLines: [], category: null, scope: null, venue: null, restSub: null, shopSub: null, dailySub: null, disclosure: "내돈내산", travelPlace: null, geoPlace: null, restPlace: null, files: [], thumbs: [] };
 var APPROVED = null; // 확인 화면에 보인 그대로의 값. 승인하면 이것만 보낸다
 var SENDING = false;
 
@@ -272,12 +272,17 @@ function search(kind) {
 /** 가게를 고르면 네이버 플레이스에서 영업시간·주차·메뉴를 받아 보여 준다. 못 받으면 보내기가 막힌다 (맛집 필수) */
 function loadPlaceInfo() {
   var box = $("rest-info"), place = S.restPlace;
-  S.placeInfo = null; S.infoLines = [];
+  S.placeInfo = null; S.placeInfoLater = false; S.infoLines = [];
   if (!place) { show("rest-info", false); return; }
   show("rest-info", true);
   box.innerHTML = "<p class='hint'>네이버에서 가게 정보를 확인하는 중… (10초쯤)</p>";
   withRetry(function () { return server("placeInfo", place); }).then(function (r) {
     if (S.restPlace !== place) return; // 그 사이 다른 가게를 골랐다
+    if (r.later) { // 네이버가 폼 서버를 막았다 (2026-11-15 429). 본체가 글을 만들 때 받는다
+      S.placeInfoLater = true;
+      box.innerHTML = "<p class='hint'>네이버가 지금 폼 서버의 요청을 막고 있어요 (" + esc(r.code) + "). 가게 정보(영업시간·메뉴·주차)는 본체가 글을 만들 때 받아요. 먹은 메뉴를 직접 적고 그대로 보내 주세요.</p>";
+      return;
+    }
     S.placeInfo = r.info; S.infoLines = r.lines;
     var html = r.lines.filter(function (l) { return l.indexOf("메뉴 ") !== 0; }).map(function (l) { return "<p>" + esc(l) + "</p>"; }).join("");
     html += r.info.menus.length ? "<p class='hint'>메뉴 (눌러서 먹은 메뉴에 넣기)</p><div class='chips' id='menu-chips'></div>" : "<p class='hint'>네이버에 등록된 메뉴가 없어요. 먹은 메뉴를 직접 적어 주세요.</p>";
@@ -307,7 +312,7 @@ function collectForm() {
     memo: $("memo").value,
     visited_on: $("visited").value,
     travel: { scope: S.scope, place: S.scope === "해외" ? S.geoPlace : S.travelPlace, topic: $("travel-topic").value },
-    restaurant: { subcategory: S.restSub, venue_type: S.venue, place: S.restPlace, dishes: $("dishes").value, place_info: S.placeInfo },
+    restaurant: { subcategory: S.restSub, venue_type: S.venue, place: S.restPlace, dishes: $("dishes").value, place_info: S.placeInfo, place_info_later: S.placeInfoLater },
     shopping: { subcategory: S.shopSub, product_name: $("product").value, description: $("shop-desc").value },
     daily: { subcategory: S.dailySub, topic: $("daily-topic").value, description: $("daily-desc").value }
   };
@@ -330,7 +335,7 @@ function preflight() {
   if (f.memo.trim().length < CFG.memo_min) errs.push("소감을 " + CFG.memo_min + "자 이상 적어 주세요");
   if (S.files.length < CFG.photos_min || S.files.length > CFG.photos_max) errs.push("사진은 " + CFG.photos_min + "~" + CFG.photos_max + "장이에요");
   S.files.forEach(function (x) { if (x.size > CFG.photo_max_bytes) errs.push("25MB 넘는 사진: " + x.name); });
-  if (f.category === "맛집" && !S.placeInfo) errs.push("네이버 가게 정보(영업시간·메뉴·주차)가 아직 안 왔어요. 가게를 고른 뒤 정보가 보일 때까지 기다려 주세요");
+  if (f.category === "맛집" && !S.placeInfo && !S.placeInfoLater) errs.push("네이버 가게 정보(영업시간·메뉴·주차)가 아직 안 왔어요. 가게를 고른 뒤 정보가 보일 때까지 기다려 주세요");
   if (S.disclosure !== "내돈내산" && !f.sponsor.trim()) errs.push("제공한 업체 이름을 적어 주세요");
   return errs;
 }
@@ -373,7 +378,7 @@ function summaryRows(snap) {
     rows.push([f.travel.scope === "해외" ? "여행지" : "장소", placeText(f.travel.place)], ["여행 주제", f.travel.topic.trim()]);
   } else if (f.category === "맛집") {
     rows.push(["가게", placeText(f.restaurant.place)], ["먹은 메뉴", listText(f.restaurant.dishes)]);
-    rows.push(["가게 정보 (네이버)", S.infoLines.filter(function (l) { return l.indexOf("메뉴 ") !== 0; }).join(", ")]);
+    rows.push(["가게 정보 (네이버)", S.placeInfoLater ? "본체가 글을 만들 때 받아요" : S.infoLines.filter(function (l) { return l.indexOf("메뉴 ") !== 0; }).join(", ")]);
   } else if (f.category === "쇼핑") {
     rows.push(["제품 이름", f.shopping.product_name.trim()], ["제품 정보", f.shopping.description.trim()]);
   } else if (f.category === "일상") {
